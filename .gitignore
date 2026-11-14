@@ -1,35 +1,2286 @@
-# Gradle files
-.gradle/
-build/
-.kotlin/
+```html
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>বাংলা ৩ডি বাস সিমুলেটর প্রো</title>
+    <!-- বাংলা ফন্ট -->
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Three.js লাইব্রেরি -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: none;
+            font-family: 'Hind Siliguri', sans-serif;
+        }
 
-# Local configuration file (sdk path, etc)
-local.properties
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #090d16;
+            color: #ffffff;
+        }
 
-# Log/OS Files
-*.log
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
 
-# Android Studio generated files and folders
-captures/
-.externalNativeBuild/
-.cxx/
-*.aab
-*.apk
-output-metadata.json
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
 
-# IntelliJ
-*.iml
-.idea/
-misc.xml
-deploymentTargetDropDown.xml
-render.experimental.xml
+        /* পোর্ট্রেট মোড সতর্কতা */
+        #portrait-warning {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(9, 13, 22, 0.96);
+            z-index: 9999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 24px;
+        }
 
-# Keystore files
-*.jks
-*.keystore
+        @media screen and (orientation: portrait) and (max-width: 820px) {
+            #portrait-warning.active-warn {
+                display: flex;
+            }
+        }
 
-# Google Services (e.g. APIs or Firebase)
-google-services.json
+        .rotate-icon {
+            font-size: 3.5rem;
+            margin-bottom: 12px;
+            animation: rotatePhone 2s infinite ease-in-out;
+        }
 
-# Android Profiling
-*.hprof
+        @keyframes rotatePhone {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(-90deg); }
+        }
+
+        /* ওভারলে স্ক্রিন (শুরু এবং গেম ওভার) */
+        .overlay-screen {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(15, 23, 42, 0.85), rgba(2, 6, 23, 0.96));
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 16px;
+            text-align: center;
+            overflow-y: auto;
+        }
+
+        .overlay-screen h1 {
+            font-size: clamp(1.8rem, 4vw, 2.6rem);
+            color: #fbbf24;
+            margin-bottom: 6px;
+            text-shadow: 0 4px 16px rgba(251, 191, 36, 0.4);
+        }
+
+        .overlay-screen p {
+            font-size: 0.98rem;
+            color: #cbd5e1;
+            max-width: 560px;
+            margin-bottom: 14px;
+            line-height: 1.4;
+        }
+
+        .controls-guide {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid #475569;
+            border-radius: 14px;
+            padding: 12px 18px;
+            margin-bottom: 18px;
+            text-align: left;
+            font-size: 0.88rem;
+            color: #e2e8f0;
+            max-width: 540px;
+            width: 100%;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .controls-guide div {
+            margin: 4px 0;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            border: none;
+            padding: 12px 36px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+            transition: transform 0.15s;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.95);
+        }
+
+        .btn-secondary {
+            background: rgba(51, 65, 85, 0.9);
+            color: #e2e8f0;
+            border: 1px solid #64748b;
+            padding: 8px 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 30px;
+            margin-top: 12px;
+            cursor: pointer;
+        }
+
+        /* উপরের HUD */
+        #hud-top {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 20;
+            gap: 6px;
+        }
+
+        .hud-panel {
+            background: rgba(15, 23, 42, 0.82);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 5px 12px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            pointer-events: auto;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-label {
+            font-size: 0.68rem;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .stat-value.money {
+            color: #34d399;
+        }
+
+        .bar-container {
+            width: 64px;
+            height: 6px;
+            background: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 3px;
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 100%;
+            transition: width 0.2s, background-color 0.2s;
+        }
+
+        #fuel-bar { background-color: #fbbf24; }
+        #health-bar { background-color: #10b981; }
+
+        /* মাঝখানের মিশন ও কন্ট্রোল সুইচার */
+        .top-center-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            pointer-events: auto;
+        }
+
+        #mission-box {
+            background: rgba(30, 58, 138, 0.88);
+            border: 1px solid #3b82f6;
+            border-radius: 10px;
+            padding: 4px 14px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+        }
+
+        #mission-text {
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .top-buttons-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .pill-btn {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            border: 1px solid #38bdf8;
+            color: #fff;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);
+        }
+
+        .pill-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* মিনিম্যাপ রাডার (বাম উপরে) */
+        #minimap-container {
+            position: absolute;
+            top: 62px;
+            left: 8px;
+            width: 104px;
+            height: 104px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 2px solid #475569;
+            border-radius: 50%;
+            overflow: hidden;
+            z-index: 20;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+
+        #minimap-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ফ্লোটিং নোটিফিকেশন */
+        #notification-banner {
+            position: absolute;
+            top: 84px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(16, 185, 129, 0.95);
+            color: #fff;
+            padding: 5px 18px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.45);
+            opacity: 0;
+            transition: opacity 0.25s, transform 0.25s;
+            pointer-events: none;
+            z-index: 30;
+            white-space: nowrap;
+        }
+
+        #notification-banner.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(4px);
+        }
+
+        /* ডান পাশের সিমুলেটর অ্যাকশন বাটনসমূহ */
+        #bus-features {
+            position: absolute;
+            top: 60px;
+            right: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 20;
+        }
+
+        .feature-btn {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e2e8f0;
+            padding: 5px 9px;
+            border-radius: 9px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            min-width: 105px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+        }
+
+        .feature-btn:active {
+            transform: scale(0.94);
+        }
+
+        .feature-btn.active {
+            background: rgba(245, 158, 11, 0.95);
+            color: #0f172a;
+            border-color: #fde047;
+            font-weight: 700;
+        }
+
+        .feature-btn.engine-on {
+            background: rgba(16, 185, 129, 0.9);
+            color: #fff;
+            border-color: #6ee7b7;
+        }
+
+        .feature-btn.door-ready {
+            background: rgba(16, 185, 129, 0.96);
+            color: #fff;
+            border-color: #6ee7b7;
+            animation: pulseGreen 1.2s infinite;
+        }
+
+        @keyframes pulseGreen {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* যাত্রী ওঠানামার প্রোগ্রেস বার */
+        #boarding-overlay {
+            position: absolute;
+            top: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid #34d399;
+            padding: 7px 16px;
+            border-radius: 12px;
+            text-align: center;
+            display: none;
+            z-index: 25;
+        }
+
+        .progress-track {
+            width: 180px;
+            height: 7px;
+            background: #334155;
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        #boarding-fill {
+            width: 0%;
+            height: 100%;
+            background: #10b981;
+        }
+
+        /* নিচের HUD: স্টিয়ারিং, ডিজিটাল ক্লাস্টার, এবং পেডাল */
+        #hud-bottom {
+            position: absolute;
+            bottom: 10px;
+            left: 12px;
+            right: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .control-zone-left {
+            pointer-events: auto;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        /* ১. রোটারি স্টিয়ারিং হুইল */
+        #steering-wheel-container {
+            width: 136px;
+            height: 136px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #steering-wheel-svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.7));
+            transform-origin: center center;
+            will-change: transform;
+        }
+
+        /* ২. টাচ বাটন */
+        #touch-buttons-container {
+            display: none;
+            gap: 10px;
+        }
+
+        .arrow-btn {
+            width: 66px;
+            height: 66px;
+            background: rgba(15, 23, 42, 0.84);
+            border: 2px solid rgba(255, 255, 255, 0.28);
+            border-radius: 16px;
+            color: #fff;
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.45);
+        }
+
+        .arrow-btn span {
+            font-size: 0.7rem;
+            color: #cbd5e1;
+        }
+
+        .arrow-btn.pressed {
+            background: rgba(59, 130, 246, 0.92);
+            border-color: #93c5fd;
+            transform: scale(0.93);
+        }
+
+        /* ৩. টিল্ট ইন্ডিকেটর */
+        #tilt-indicator-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.84);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 14px;
+            padding: 8px 12px;
+            width: 132px;
+        }
+
+        .tilt-bar-bg {
+            width: 100%;
+            height: 9px;
+            background: #334155;
+            border-radius: 5px;
+            position: relative;
+            margin: 7px 0;
+        }
+
+        #tilt-dot {
+            width: 15px;
+            height: 15px;
+            background: #38bdf8;
+            border-radius: 50%;
+            position: absolute;
+            top: -3px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 8px #38bdf8;
+        }
+
+        /* মাঝখানের ডিজিটাল ক্লাস্টার (স্পিড, RPM, গিয়ার, ইন্ডিকেটর) */
+        .center-cluster {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 16px;
+            padding: 6px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            pointer-events: auto;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+        }
+
+        .indicator-arrow {
+            font-size: 1.3rem;
+            color: #475569;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 8px;
+        }
+
+        .indicator-arrow.blinking {
+            color: #22c55e;
+            text-shadow: 0 0 10px #22c55e;
+        }
+
+        .speed-display {
+            text-align: center;
+            min-width: 64px;
+        }
+
+        #speed-val {
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #fbbf24;
+        }
+
+        .speed-unit {
+            font-size: 0.66rem;
+            color: #94a3b8;
+        }
+
+        .rpm-display {
+            text-align: center;
+            min-width: 54px;
+            border-left: 1px solid #334155;
+            padding-left: 8px;
+        }
+
+        #rpm-val {
+            font-size: 1.05rem;
+            font-weight: 700;
+            line-height: 1.1;
+            color: #38bdf8;
+        }
+
+        /* গিয়ার বক্স */
+        .gear-box {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            background: #1e293b;
+            padding: 3px;
+            border-radius: 8px;
+        }
+
+        .gear-btn {
+            padding: 2px 9px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 5px;
+            background: transparent;
+            color: #94a3b8;
+            cursor: pointer;
+        }
+
+        .gear-btn.active {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .gear-btn.active[data-gear="D"] {
+            background: #10b981;
+        }
+
+        .gear-btn.active[data-gear="N"] {
+            background: #f59e0b;
+        }
+
+        /* ডান পাশের পেডালসমূহ */
+        .control-zone-right {
+            display: flex;
+            align-items: flex-end;
+            gap: 9px;
+            pointer-events: auto;
+        }
+
+        #btn-handbrake {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: rgba(30, 41, 59, 0.9);
+            border: 2px solid #94a3b8;
+            color: #f8fafc;
+            font-weight: 700;
+            font-size: 0.92rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+        }
+
+        #btn-handbrake.active {
+            background: #dc2626;
+            border-color: #fca5a5;
+            color: #fff;
+            box-shadow: 0 0 12px rgba(220, 38, 38, 0.85);
+        }
+
+        .pedal-btn {
+            width: 62px;
+            height: 90px;
+            border-radius: 12px 12px 16px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.28);
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 9px 0;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.55);
+            transition: transform 0.08s, filter 0.08s;
+        }
+
+        .pedal-tread {
+            width: 65%;
+            height: 4px;
+            background: rgba(255,255,255,0.25);
+            border-radius: 2px;
+        }
+
+        #btn-brake {
+            height: 74px;
+            background: linear-gradient(180deg, #dc2626, #7f1d1d);
+        }
+
+        #btn-brake.pressed {
+            transform: scale(0.92) translateY(4px);
+            filter: brightness(1.25);
+        }
+
+        #btn-gas {
+            height: 94px;
+            background: linear-gradient(180deg, #16a34a, #14532d);
+        }
+
+        #btn-gas.pressed {
+            transform: scale(0.92) translateY(4px);
+            filter: brightness(1.25);
+        }
+
+        /* ছোট মোবাইল ল্যান্ডস্কেপ স্ক্রিনের জন্য অ্যাডজাস্টমেন্ট */
+        @media (max-height: 460px) {
+            #minimap-container { width: 82px; height: 82px; top: 54px; }
+            #bus-features { top: 52px; gap: 4px; }
+            .feature-btn { padding: 4px 7px; font-size: 0.72rem; min-width: 94px; }
+            #steering-wheel-container { width: 114px; height: 114px; }
+            .pedal-btn { width: 54px; }
+            #btn-gas { height: 80px; }
+            #btn-brake { height: 64px; }
+            .center-cluster { padding: 4px 10px; gap: 7px; }
+            #speed-val { font-size: 1.45rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- পোর্ট্রেট মোড সতর্কবার্তা -->
+<div id="portrait-warning" class="active-warn">
+    <div class="rotate-icon">📱</div>
+    <h2 style="color: #fbbf24; margin-bottom: 8px;">মোবাইলটি আড়াআড়ি (Landscape) করে ধরুন</h2>
+    <p style="color: #cbd5e1; max-width: 320px;">স্টিয়ারিং হুইল এবং পেডাল দিয়ে আরামদায়কভাবে বাস চালানোর জন্য আপনার ফোনটি ঘুরিয়ে নিন।</p>
+    <button class="btn-secondary" id="dismiss-portrait">তবুও চালিয়ে যান</button>
+</div>
+
+<div id="game-container">
+    <!-- গেম শুরুর স্ক্রিন -->
+    <div id="start-screen" class="overlay-screen">
+        <h1>🚌 বাংলা ৩ডি বাস সিমুলেটর প্রো</h1>
+        <p>বাস্তবসম্মত ৩ডি শহর, এআই ট্রাফিক, দিন-রাতের আবহাওয়া এবং যাত্রী পরিবহন মিশনসহ অ্যাডভান্সড বাস ড্রাইভিং সিমুলেটর।</p>
+        
+        <div class="controls-guide">
+            <div><strong>🎮 কীভাবে খেলবেন:</strong></div>
+            <div>• <strong>ইঞ্জিন ও গিয়ার:</strong> প্রথমে <strong>ইঞ্জিন চালু</strong> করুন, তারপর গিয়ার <strong>D</strong>-তে দিয়ে <strong>গতি (Gas)</strong> চাপুন।</div>
+            <div>• <strong>মোবাইল কন্ট্রোল:</strong> বাম পাশের <strong>স্টিয়ারিং হুইল</strong> ঘোরান অথবা উপরের বাটন থেকে <strong>টিল্ট (Tilt) / বাটন</strong> মোড বেছে নিন।</div>
+            <div>• <strong>যাত্রী ও জ্বালানি:</strong> সবুজ স্টপেজে থেমে <strong>দরজা</strong> খুলে যাত্রী তুলুন। হলুদ স্টেশনে জ্বালানি নিন ও মেরামত করুন।</div>
+            <div>• <strong>পিসি কিবোর্ড:</strong> WASD / Arrow Keys, I (ইঞ্জিন), Space (হ্যান্ডব্রেক), H (হর্ন), L (লাইট), N (দিন/রাত), Q/E (ইন্ডিকেটর), O (দরজা), C (ক্যামেরা)।</div>
+        </div>
+
+        <button id="start-btn" class="btn-primary">ড্রাইভিং শুরু করুন</button>
+    </div>
+
+    <!-- গেম ওভার স্ক্রিন -->
+    <div id="gameover-screen" class="overlay-screen" style="display: none;">
+        <h1>গেম ওভার!</h1>
+        <p id="gameover-reason">বাসের জ্বালানি শেষ হয়ে গেছে অথবা বাসটি মারাত্মক ক্ষতিগ্রস্ত হয়েছে।</p>
+        <div class="hud-panel" style="margin-bottom: 20px;">
+            <div class="stat-item">
+                <span class="stat-label">মোট আয়</span>
+                <span class="stat-value money" id="final-money">৳ ০</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">মোট যাত্রী সেবা</span>
+                <span class="stat-value" id="final-passengers">০ জন</span>
+            </div>
+        </div>
+        <button id="restart-btn" class="btn-primary">আবার খেলুন</button>
+    </div>
+
+    <!-- উপরের HUD -->
+    <div id="hud-top">
+        <!-- বাম পাশ: আয় ও যাত্রী -->
+        <div class="hud-panel">
+            <div class="stat-item">
+                <span class="stat-label">মোট আয়</span>
+                <span class="stat-value money" id="hud-money">৳ ৫০০</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">যাত্রী</span>
+                <span class="stat-value" id="hud-passengers">০ / ৩০</span>
+            </div>
+        </div>
+
+        <!-- মাঝখান: মিশন ও মোড সুইচার -->
+        <div class="top-center-group">
+            <div id="mission-box">
+                <div id="mission-text">ইঞ্জিন চালু করে সবুজ স্টপেজে এগিয়ে যান</div>
+            </div>
+            <div class="top-buttons-row">
+                <button id="btn-control-mode" class="pill-btn">কন্ট্রোল: স্টিয়ারিং</button>
+                <button id="btn-day-night" class="pill-btn" style="background: linear-gradient(135deg, #4f46e5, #3730a3); border-color: #818cf8;">☀️ দিন</button>
+            </div>
+        </div>
+
+        <!-- ডান পাশ: জ্বালানি ও হেলথ -->
+        <div class="hud-panel">
+            <div class="stat-item">
+                <span class="stat-label">জ্বালানি</span>
+                <div class="bar-container">
+                    <div id="fuel-bar" class="bar-fill"></div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">হেলথ</span>
+                <div class="bar-container">
+                    <div id="health-bar" class="bar-fill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- মিনিম্যাপ রাডার -->
+    <div id="minimap-container">
+        <canvas id="minimap-canvas" width="120" height="120"></canvas>
+    </div>
+
+    <!-- ফ্লোটিং নোটিফিকেশন -->
+    <div id="notification-banner">ইঞ্জিন চালু হয়েছে!</div>
+
+    <!-- ডান পাশের সিমুলেটর অ্যাকশন বাটন -->
+    <div id="bus-features">
+        <button class="feature-btn engine-on" id="btn-engine">
+            <span>🔑 ইঞ্জিন</span>
+            <span id="engine-label">চালু</span>
+        </button>
+        <button class="feature-btn" id="btn-camera">
+            <span>🎥 ক্যামেরা</span>
+            <span id="cam-label">চেজ</span>
+        </button>
+        <button class="feature-btn" id="btn-headlight">
+            <span>💡 হেডলাইট</span>
+            <span id="light-label">বন্ধ</span>
+        </button>
+        <button class="feature-btn" id="btn-horn">
+            <span>📢 হর্ন</span>
+            <span>বাজান</span>
+        </button>
+        <button class="feature-btn" id="btn-door">
+            <span>🚪 দরজা</span>
+            <span id="door-label">বন্ধ</span>
+        </button>
+        <button class="feature-btn" id="btn-refuel" style="display: none; background: #d97706; color: #fff; border-color: #fde047;">
+            <span>⛽ তেল নিন</span>
+            <span>৳২০০</span>
+        </button>
+        <button class="feature-btn" id="btn-repair" style="display: none; background: #0284c7; color: #fff; border-color: #7dd3fc;">
+            <span>🔧 মেরামত</span>
+            <span>৳১৫০</span>
+        </button>
+    </div>
+
+    <!-- যাত্রী ওঠানামার ওভারলে -->
+    <div id="boarding-overlay">
+        <div id="boarding-text" style="font-weight: 700; font-size: 0.85rem;">যাত্রী ওঠানামা করছে...</div>
+        <div class="progress-track">
+            <div id="boarding-fill"></div>
+        </div>
+    </div>
+
+    <!-- নিচের HUD: স্টিয়ারিং, ড্যাশবোর্ড ক্লাস্টার এবং পেডাল -->
+    <div id="hud-bottom">
+        <!-- বাম পাশের স্টিয়ারিং জোন -->
+        <div class="control-zone-left">
+            <!-- মোড ১: রোটারি স্টিয়ারিং হুইল -->
+            <div id="steering-wheel-container">
+                <svg id="steering-wheel-svg" viewBox="0 0 200 200">
+                    <circle cx="100" cy="100" r="86" fill="none" stroke="#1e293b" stroke-width="22"/>
+                    <circle cx="100" cy="100" r="86" fill="none" stroke="#475569" stroke-width="4" stroke-dasharray="12 6"/>
+                    <rect x="95" y="4" width="10" height="22" rx="3" fill="#ef4444"/>
+                    <path d="M 22 100 L 178 100" stroke="#334155" stroke-width="18" stroke-linecap="round"/>
+                    <path d="M 100 100 L 100 180" stroke="#334155" stroke-width="18" stroke-linecap="round"/>
+                    <circle cx="100" cy="100" r="34" fill="#0f172a" stroke="#64748b" stroke-width="4"/>
+                    <circle cx="100" cy="100" r="22" fill="#f59e0b"/>
+                    <text x="100" y="105" text-anchor="middle" fill="#0f172a" font-size="14" font-weight="bold">বাস</text>
+                </svg>
+            </div>
+
+            <!-- মোড ২: বাটন কন্ট্রোল -->
+            <div id="touch-buttons-container">
+                <button class="arrow-btn" id="btn-left">◀<span>বামে</span></button>
+                <button class="arrow-btn" id="btn-right">▶<span>ডানে</span></button>
+            </div>
+
+            <!-- মোড ৩: টিল্ট কন্ট্রোল -->
+            <div id="tilt-indicator-container">
+                <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 700;">মোবাইল কাত করুন</span>
+                <div class="tilt-bar-bg">
+                    <div id="tilt-dot"></div>
+                </div>
+                <button id="btn-calibrate-tilt" style="background: #334155; color: #fff; border: none; border-radius: 6px; padding: 2px 8px; font-size: 0.68rem;">সেন্টার সেট</button>
+            </div>
+        </div>
+
+        <!-- মাঝখানের ডিজিটাল ড্যাশবোর্ড -->
+        <div class="center-cluster">
+            <div class="indicator-arrow" id="ind-left" title="বাম ইন্ডিকেটর (Q)">⬅</div>
+            
+            <div class="speed-display">
+                <div id="speed-val">০</div>
+                <div class="speed-unit">কিমি/ঘণ্টা</div>
+            </div>
+
+            <div class="rpm-display">
+                <div id="rpm-val">৮০০</div>
+                <div class="speed-unit">RPM</div>
+            </div>
+
+            <!-- গিয়ার সিলেক্টর -->
+            <div class="gear-box">
+                <button class="gear-btn active" data-gear="D">D</button>
+                <button class="gear-btn" data-gear="N">N</button>
+                <button class="gear-btn" data-gear="R">R</button>
+            </div>
+
+            <div class="indicator-arrow" id="ind-right" title="ডান ইন্ডিকেটর (E)">➡</div>
+        </div>
+
+        <!-- ডান পাশের পেডালসমূহ -->
+        <div class="control-zone-right">
+            <button id="btn-handbrake" title="হ্যান্ডব্রেক (Space)">P</button>
+            <button class="pedal-btn" id="btn-brake">
+                <div class="pedal-tread"></div>
+                <span>ব্রেক</span>
+                <div class="pedal-tread"></div>
+            </button>
+            <button class="pedal-btn" id="btn-gas">
+                <div class="pedal-tread"></div>
+                <span>গতি</span>
+                <div class="pedal-tread"></div>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * বাংলা ৩ডি বাস সিমুলেটর প্রো (Bangla 3D Bus Simulator Pro)
+ * বাস্তবসম্মত পদার্থবিদ্যা, দিন-রাতের আবহাওয়া, মিনিম্যাপ, এআই ট্রাফিক এবং মাল্টি-টাচ কন্ট্রোল।
+ */
+
+// --- Web Audio API সাউন্ড সিস্টেম ---
+class SoundManager {
+    constructor() {
+        this.ctx = null;
+        this.engineOsc = null;
+        this.engineGain = null;
+        this.isInitialized = false;
+    }
+
+    init() {
+        if (this.isInitialized) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        this.ctx = new AudioContext();
+        
+        this.engineOsc = this.ctx.createOscillator();
+        this.engineGain = this.ctx.createGain();
+        this.engineOsc.type = 'sawtooth';
+        this.engineOsc.frequency.setValueAtTime(38, this.ctx.currentTime);
+        
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(140, this.ctx.currentTime);
+
+        this.engineGain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+        
+        this.engineOsc.connect(filter);
+        filter.connect(this.engineGain);
+        this.engineGain.connect(this.ctx.destination);
+        this.engineOsc.start();
+        
+        this.isInitialized = true;
+    }
+
+    updateEngine(speedRatio, engineOn) {
+        if (!this.isInitialized || !this.ctx) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        if (!engineOn) {
+            this.engineGain.gain.setTargetAtTime(0.0, this.ctx.currentTime, 0.1);
+            return;
+        }
+        this.engineGain.gain.setTargetAtTime(0.055, this.ctx.currentTime, 0.1);
+        const targetFreq = 38 + Math.abs(speedRatio) * 95;
+        this.engineOsc.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.1);
+    }
+
+    playHorn() {
+        if (!this.isInitialized) this.init();
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+
+        const now = this.ctx.currentTime;
+        [185, 233].forEach(freq => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(freq, now);
+            
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+            
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.45);
+        });
+    }
+
+    playCoin() {
+        if (!this.isInitialized || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.setValueAtTime(880, now + 0.1);
+        
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+    }
+
+    playCrash() {
+        if (!this.isInitialized || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(85, now);
+        osc.frequency.exponentialRampToValueAtTime(26, now + 0.3);
+        
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+    }
+}
+
+const sound = new SoundManager();
+
+// --- বাংলা সংখ্যা রূপান্তরকারী ---
+function toBengaliNumber(num) {
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return Math.round(num).toString().replace(/\d/g, d => bengaliDigits[d]);
+}
+
+// --- গেম স্টেট ---
+const state = {
+    isPlaying: false,
+    engineOn: true,
+    isNight: false,
+    speed: 0,
+    maxSpeed: 100,
+    rpm: 800,
+    gear: 'D', // D, N, R
+    handbrake: false,
+    steeringInput: 0,
+    wheelAngleDeg: 0,
+    controlMode: 'wheel', // 'wheel', 'buttons', 'tilt'
+    tiltOffset: 0,
+    rawTilt: 0,
+    busX: 2.5,
+    busZ: 0,
+    busRotation: 0,
+    fuel: 100,
+    health: 100,
+    money: 500,
+    passengers: 0,
+    maxPassengers: 30,
+    totalServed: 0,
+    headlightsOn: false,
+    leftIndicator: false,
+    rightIndicator: false,
+    cameraMode: 0, // 0: Chase, 1: Cockpit, 2: Cinematic Top
+    doorOpen: false,
+    isBoarding: false,
+    boardingProgress: 0,
+    activeStop: null,
+    indicatorTimer: 0
+};
+
+const keys = { gas: false, brake: false, left: false, right: false };
+
+document.getElementById('dismiss-portrait').addEventListener('click', () => {
+    document.getElementById('portrait-warning').classList.remove('active-warn');
+});
+
+// --- Three.js সিন সেটআপ ---
+const container = document.getElementById('game-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.FogExp2(0x87ceeb, 0.0038);
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 480);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.insertBefore(renderer.domElement, container.firstChild);
+
+// আলোকসজ্জা
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.68);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xfffbeb, 0.88);
+dirLight.position.set(50, 100, 50);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.width = 1024;
+dirLight.shadow.mapSize.height = 1024;
+scene.add(dirLight);
+
+// --- বিস্তারিত ৩ডি বাস মডেল ---
+const busGroup = new THREE.Group();
+scene.add(busGroup);
+
+// বাসের বডি (সবুজ ও সাদা বাংলাদেশের এসি/সিটি বাস থিম)
+const busBody = new THREE.Mesh(
+    new THREE.BoxGeometry(2.65, 2.25, 8.4),
+    new THREE.MeshStandardMaterial({ color: 0x059669, roughness: 0.25, metalness: 0.15 })
+);
+busBody.position.y = 1.62;
+busBody.castShadow = true;
+busGroup.add(busBody);
+
+// সাদা ও সোনালী স্ট্রাইপ
+const busStripe = new THREE.Mesh(
+    new THREE.BoxGeometry(2.69, 0.45, 8.44),
+    new THREE.MeshStandardMaterial({ color: 0xfef08a })
+);
+busStripe.position.y = 1.32;
+busGroup.add(busStripe);
+
+// ছাদ ও এসি ইউনিট
+const busRoof = new THREE.Mesh(
+    new THREE.BoxGeometry(2.55, 0.22, 8.2),
+    new THREE.MeshStandardMaterial({ color: 0xf8fafc })
+);
+busRoof.position.y = 2.82;
+busGroup.add(busRoof);
+
+const acUnit = new THREE.Mesh(
+    new THREE.BoxGeometry(1.5, 0.28, 2.2),
+    new THREE.MeshStandardMaterial({ color: 0xcbd5e1 })
+);
+acUnit.position.set(0, 3.02, -0.8);
+busGroup.add(acUnit);
+
+// জানালার কাঁচ
+const glassMat = new THREE.MeshStandardMaterial({
+    color: 0x0f172a,
+    roughness: 0.1,
+    metalness: 0.85,
+    transparent: true,
+    opacity: 0.72
+});
+const frontGlass = new THREE.Mesh(new THREE.BoxGeometry(2.45, 1.15, 0.1), glassMat);
+frontGlass.position.set(0, 1.98, -4.21);
+busGroup.add(frontGlass);
+
+const sideGlass = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.95, 6.6), glassMat);
+sideGlass.position.set(0, 1.98, 0.2);
+busGroup.add(sideGlass);
+
+// সাইড মিরর (Side Mirrors)
+const mirrorArmGeo = new THREE.BoxGeometry(0.35, 0.06, 0.06);
+const mirrorBoxGeo = new THREE.BoxGeometry(0.14, 0.38, 0.18);
+const mirrorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+
+const leftMirrorArm = new THREE.Mesh(mirrorArmGeo, mirrorMat);
+leftMirrorArm.position.set(-1.45, 2.25, -4.05);
+const leftMirror = new THREE.Mesh(mirrorBoxGeo, mirrorMat);
+leftMirror.position.set(-1.6, 2.1, -4.05);
+
+const rightMirrorArm = new THREE.Mesh(mirrorArmGeo, mirrorMat);
+rightMirrorArm.position.set(1.45, 2.25, -4.05);
+const rightMirror = new THREE.Mesh(mirrorBoxGeo, mirrorMat);
+rightMirror.position.set(1.6, 2.1, -4.05);
+busGroup.add(leftMirrorArm, leftMirror, rightMirrorArm, rightMirror);
+
+// অ্যানিমেটেড যাত্রী দরজা
+const busDoor = new THREE.Mesh(
+    new THREE.BoxGeometry(0.15, 1.85, 1.15),
+    new THREE.MeshStandardMaterial({ color: 0xfbbf24 })
+);
+busDoor.position.set(1.35, 1.42, -2.6);
+busGroup.add(busDoor);
+
+// চাকা ও রিম
+const wheelGeo = new THREE.CylinderGeometry(0.56, 0.56, 0.42, 18);
+wheelGeo.rotateZ(Math.PI / 2);
+const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111827 });
+const wheels = [];
+[[-1.28, 0.56, -2.7], [1.28, 0.56, -2.7], [-1.28, 0.56, 2.5], [1.28, 0.56, 2.5]].forEach(pos => {
+    const w = new THREE.Mesh(wheelGeo, wheelMat);
+    w.position.set(...pos);
+    busGroup.add(w);
+    wheels.push(w);
+});
+
+// হেডলাইট এবং স্পটলাইট
+const hlGeo = new THREE.BoxGeometry(0.42, 0.25, 0.1);
+const hlMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8 });
+const leftHL = new THREE.Mesh(hlGeo, hlMat);
+leftHL.position.set(-0.92, 0.9, -4.22);
+const rightHL = new THREE.Mesh(hlGeo, hlMat);
+rightHL.position.set(0.92, 0.9, -4.22);
+busGroup.add(leftHL, rightHL);
+
+const spotLightL = new THREE.SpotLight(0xfffbeb, 0, 75, Math.PI / 4.5, 0.4);
+spotLightL.position.set(-0.92, 1.0, -4.2);
+spotLightL.target.position.set(-0.92, 0, -28);
+busGroup.add(spotLightL, spotLightL.target);
+
+const spotLightR = new THREE.SpotLight(0xfffbeb, 0, 75, Math.PI / 4.5, 0.4);
+spotLightR.position.set(0.92, 1.0, -4.2);
+spotLightR.target.position.set(0.92, 0, -28);
+busGroup.add(spotLightR, spotLightR.target);
+
+// পেছনের ব্রেক লাইট
+const brakeLightMat = new THREE.MeshBasicMaterial({ color: 0x7f1d1d });
+const rearBrakeL = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.25, 0.1), brakeLightMat);
+rearBrakeL.position.set(-0.88, 0.95, 4.22);
+const rearBrakeR = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.25, 0.1), brakeLightMat);
+rearBrakeR.position.set(0.88, 0.95, 4.22);
+busGroup.add(rearBrakeL, rearBrakeR);
+
+// ইন্ডিকেটর লাইট
+const indGeo = new THREE.BoxGeometry(0.25, 0.2, 0.12);
+const indMatL = new THREE.MeshBasicMaterial({ color: 0x475569 });
+const indMatR = new THREE.MeshBasicMaterial({ color: 0x475569 });
+const busIndFL = new THREE.Mesh(indGeo, indMatL);
+busIndFL.position.set(-1.22, 0.9, -4.22);
+const busIndFR = new THREE.Mesh(indGeo, indMatR);
+busIndFR.position.set(1.22, 0.9, -4.22);
+const busIndRL = new THREE.Mesh(indGeo, indMatL);
+busIndRL.position.set(-1.22, 0.95, 4.22);
+const busIndRR = new THREE.Mesh(indGeo, indMatR);
+busIndRR.position.set(1.22, 0.95, 4.22);
+busGroup.add(busIndFL, busIndFR, busIndRL, busIndRR);
+
+// ভেতরের ককপিট ড্যাশবোর্ড এবং ৩ডি স্টিয়ারিং হুইল
+const dashGroup = new THREE.Group();
+const dashBoard = new THREE.Mesh(
+    new THREE.BoxGeometry(2.35, 0.62, 0.82),
+    new THREE.MeshStandardMaterial({ color: 0x1e293b })
+);
+dashBoard.position.set(0, 1.38, -3.75);
+dashGroup.add(dashBoard);
+
+const steeringWheel3D = new THREE.Mesh(
+    new THREE.TorusGeometry(0.28, 0.04, 8, 22),
+    new THREE.MeshStandardMaterial({ color: 0x0f172a })
+);
+steeringWheel3D.position.set(-0.68, 1.78, -3.42);
+steeringWheel3D.rotation.x = -Math.PI / 4;
+dashGroup.add(steeringWheel3D);
+busGroup.add(dashGroup);
+
+// --- শহরের রাস্তা ও পরিবেশ তৈরি ---
+const roadWidth = 18;
+const segmentLength = 60;
+const numSegments = 10;
+const roadSegments = [];
+const busStops = [];
+const serviceStations = [];
+const trafficCars = [];
+const streetLamps = [];
+
+const stopNames = [
+    "মতিঝিল বাস স্ট্যান্ড",
+    "শাহবাগ মোড়",
+    "ফার্মগেট স্টপেজ",
+    "বনানী বাস স্ট্যান্ড",
+    "উত্তরা হাউজ বিল্ডিং",
+    "মিরপুর ১০ গোলচত্বর",
+    "ধানমন্ডি ২৭ স্টপেজ"
+];
+let stopNameIndex = 0;
+
+function createEnvironmentSegment(zPos, index) {
+    const segGroup = new THREE.Group();
+    segGroup.position.z = zPos;
+
+    // সবুজ মাঠ
+    const grass = new THREE.Mesh(
+        new THREE.PlaneGeometry(260, segmentLength),
+        new THREE.MeshStandardMaterial({ color: 0x166534 })
+    );
+    grass.rotation.x = -Math.PI / 2;
+    grass.position.y = -0.05;
+    segGroup.add(grass);
+
+    // পিচঢালা রাস্তা
+    const road = new THREE.Mesh(
+        new THREE.PlaneGeometry(roadWidth, segmentLength),
+        new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85 })
+    );
+    road.rotation.x = -Math.PI / 2;
+    road.receiveShadow = true;
+    segGroup.add(road);
+
+    // ফুটপাত
+    const swGeo = new THREE.BoxGeometry(3.6, 0.25, segmentLength);
+    const swMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8 });
+    const leftSW = new THREE.Mesh(swGeo, swMat);
+    leftSW.position.set(-(roadWidth / 2 + 1.8), 0.12, 0);
+    const rightSW = new THREE.Mesh(swGeo, swMat);
+    rightSW.position.set(roadWidth / 2 + 1.8, 0.12, 0);
+    segGroup.add(leftSW, rightSW);
+
+    // রাস্তার লেন মার্কিং
+    for (let z = -segmentLength / 2 + 3; z < segmentLength / 2; z += 6) {
+        const centerLine = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.25, 3),
+            new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+        );
+        centerLine.rotation.x = -Math.PI / 2;
+        centerLine.position.set(0, 0.02, z);
+        segGroup.add(centerLine);
+
+        [-4.5, 4.5].forEach(lx => {
+            const laneLine = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.18, 2.5),
+                new THREE.MeshBasicMaterial({ color: 0xffffff })
+            );
+            laneLine.rotation.x = -Math.PI / 2;
+            laneLine.position.set(lx, 0.02, z);
+            segGroup.add(laneLine);
+        });
+    }
+
+    // দালানকোঠা, গাছপালা এবং স্ট্রিট লাইট
+    const buildingColors = [0xe2e8f0, 0xfde68a, 0xbfdbfe, 0xfecaca, 0xd8b4fe, 0xcbd5e1];
+    [-1, 1].forEach(side => {
+        for (let b = -20; b <= 20; b += 20) {
+            const h = 9 + Math.random() * 20;
+            const w = 8 + Math.random() * 5;
+            const d = 10 + Math.random() * 5;
+            const bMat = new THREE.MeshStandardMaterial({
+                color: buildingColors[Math.floor(Math.random() * buildingColors.length)]
+            });
+            const building = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bMat);
+            building.position.set(side * (roadWidth / 2 + 9 + w / 2), h / 2, b);
+            segGroup.add(building);
+
+            // গাছ
+            const trunk = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.25, 0.35, 2.5),
+                new THREE.MeshStandardMaterial({ color: 0x78350f })
+            );
+            trunk.position.set(side * (roadWidth / 2 + 2.2), 1.25, b + 8);
+            const leaves = new THREE.Mesh(
+                new THREE.DodecahedronGeometry(1.8),
+                new THREE.MeshStandardMaterial({ color: 0x16a34a })
+            );
+            leaves.position.set(side * (roadWidth / 2 + 2.2), 3.4, b + 8);
+            segGroup.add(trunk, leaves);
+
+            // স্ট্রিট লাইট
+            const pole = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.08, 0.1, 5.8),
+                new THREE.MeshStandardMaterial({ color: 0x475569 })
+            );
+            pole.position.set(side * (roadWidth / 2 + 0.6), 2.9, b - 6);
+            const lampMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8 });
+            const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.16, 0.26), lampMat);
+            lamp.position.set(side * (roadWidth / 2 + 0.2), 5.8, b - 6);
+            segGroup.add(pole, lamp);
+            streetLamps.push(lampMat);
+        }
+    });
+
+    // সবুজ বাস স্টপেজ (প্রতি ৩ সেগমেন্ট পরপর)
+    if (index > 0 && index % 3 === 0) {
+        const stopGroup = new THREE.Group();
+        const zone = new THREE.Mesh(
+            new THREE.PlaneGeometry(3.8, 12),
+            new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.48 })
+        );
+        zone.rotation.x = -Math.PI / 2;
+        zone.position.set(roadWidth / 2 - 2.2, 0.04, 0);
+        stopGroup.add(zone);
+
+        const shelter = new THREE.Mesh(
+            new THREE.BoxGeometry(2.2, 3.2, 6),
+            new THREE.MeshStandardMaterial({ color: 0x0284c7 })
+        );
+        shelter.position.set(roadWidth / 2 + 2.5, 1.6, 0);
+        stopGroup.add(shelter);
+
+        // অপেক্ষমাণ যাত্রী
+        for (let p = -1.5; p <= 1.5; p += 1.5) {
+            const person = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.25, 0.25, 1.55),
+                new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff })
+            );
+            person.position.set(roadWidth / 2 + 1.2, 0.9, p);
+            stopGroup.add(person);
+        }
+
+        segGroup.add(stopGroup);
+        busStops.push({
+            segment: segGroup,
+            name: stopNames[stopNameIndex % stopNames.length],
+            visited: false
+        });
+        stopNameIndex++;
+    }
+
+    // হলুদ ফুয়েল ও রিপেয়ার স্টেশন (প্রতি ৫ সেগমেন্ট পরপর)
+    if (index > 0 && index % 5 === 0) {
+        const stationGroup = new THREE.Group();
+        const zone = new THREE.Mesh(
+            new THREE.PlaneGeometry(4, 12),
+            new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.52 })
+        );
+        zone.rotation.x = -Math.PI / 2;
+        zone.position.set(roadWidth / 2 - 2.2, 0.04, 0);
+        stationGroup.add(zone);
+
+        const canopy = new THREE.Mesh(
+            new THREE.BoxGeometry(5, 0.5, 8),
+            new THREE.MeshStandardMaterial({ color: 0xea580c })
+        );
+        canopy.position.set(roadWidth / 2 + 2.5, 4.2, 0);
+        stationGroup.add(canopy);
+
+        segGroup.add(stationGroup);
+        serviceStations.push({ segment: segGroup });
+    }
+
+    scene.add(segGroup);
+    roadSegments.push(segGroup);
+}
+
+for (let i = 0; i < numSegments; i++) {
+    createEnvironmentSegment(-i * segmentLength, i);
+}
+
+// --- এআই ট্রাফিক গাড়ি ---
+function createTrafficCar(zPos, laneX, dir) {
+    const carGroup = new THREE.Group();
+    const colors = [0x3b82f6, 0xeab308, 0x10b981, 0x8b5cf6, 0xf97316, 0xffffff];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+
+    const chassis = new THREE.Mesh(
+        new THREE.BoxGeometry(2.0, 1.1, 4.2),
+        new THREE.MeshStandardMaterial({ color })
+    );
+    chassis.position.y = 0.8;
+    carGroup.add(chassis);
+
+    const cabin = new THREE.Mesh(
+        new THREE.BoxGeometry(1.7, 0.8, 2.2),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b })
+    );
+    cabin.position.y = 1.65;
+    carGroup.add(cabin);
+
+    carGroup.position.set(laneX, 0, zPos);
+    if (dir === 1) carGroup.rotation.y = Math.PI;
+
+    scene.add(carGroup);
+    trafficCars.push({
+        mesh: carGroup,
+        laneX,
+        dir,
+        speed: dir === -1 ? 35 + Math.random() * 15 : 40 + Math.random() * 15
+    });
+}
+
+createTrafficCar(-75, 2.5, -1);
+createTrafficCar(-155, 6.2, -1);
+createTrafficCar(-115, -2.8, 1);
+createTrafficCar(-215, -6.2, 1);
+createTrafficCar(-285, 2.5, -1);
+
+// =========================================================================
+// মোবাইল স্টিয়ারিং হুইল, বাটন এবং টিল্ট কন্ট্রোল
+// =========================================================================
+const wheelContainer = document.getElementById('steering-wheel-container');
+const wheelSvg = document.getElementById('steering-wheel-svg');
+const touchBtnsContainer = document.getElementById('touch-buttons-container');
+const tiltContainer = document.getElementById('tilt-indicator-container');
+const tiltDot = document.getElementById('tilt-dot');
+const btnControlMode = document.getElementById('btn-control-mode');
+
+let wheelTouchId = null;
+let lastPointerAngle = 0;
+
+function getAngleFromWheelCenter(clientX, clientY) {
+    const rect = wheelContainer.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    return Math.atan2(clientY - cy, clientX - cx) * (180 / Math.PI);
+}
+
+wheelContainer.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (wheelTouchId !== null) return;
+    const touch = e.changedTouches[0];
+    wheelTouchId = touch.identifier;
+    lastPointerAngle = getAngleFromWheelCenter(touch.clientX, touch.clientY);
+}, { passive: false });
+
+wheelContainer.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (wheelTouchId === null) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        if (t.identifier === wheelTouchId) {
+            const currentAngle = getAngleFromWheelCenter(t.clientX, t.clientY);
+            let delta = currentAngle - lastPointerAngle;
+            if (delta > 180) delta -= 360;
+            if (delta < -180) delta += 360;
+            lastPointerAngle = currentAngle;
+
+            state.wheelAngleDeg = Math.max(-360, Math.min(360, state.wheelAngleDeg + delta));
+            state.steeringInput = -state.wheelAngleDeg / 360;
+        }
+    }
+}, { passive: false });
+
+function releaseWheelTouch(e) {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === wheelTouchId) {
+            wheelTouchId = null;
+            break;
+        }
+    }
+}
+wheelContainer.addEventListener('touchend', releaseWheelTouch);
+wheelContainer.addEventListener('touchcancel', releaseWheelTouch);
+
+let isMouseDraggingWheel = false;
+wheelContainer.addEventListener('mousedown', (e) => {
+    isMouseDraggingWheel = true;
+    lastPointerAngle = getAngleFromWheelCenter(e.clientX, e.clientY);
+});
+window.addEventListener('mousemove', (e) => {
+    if (!isMouseDraggingWheel) return;
+    const currentAngle = getAngleFromWheelCenter(e.clientX, e.clientY);
+    let delta = currentAngle - lastPointerAngle;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    lastPointerAngle = currentAngle;
+    state.wheelAngleDeg = Math.max(-360, Math.min(360, state.wheelAngleDeg + delta));
+    state.steeringInput = -state.wheelAngleDeg / 360;
+});
+window.addEventListener('mouseup', () => { isMouseDraggingWheel = false; });
+
+function handleDeviceOrientation(e) {
+    const isLandscape = window.innerWidth > window.innerHeight;
+    let tilt = isLandscape ? (e.beta || 0) : (e.gamma || 0);
+    if (isLandscape && (window.orientation === -90 || (screen.orientation && screen.orientation.angle === 270))) {
+        tilt = -tilt;
+    }
+    state.rawTilt = tilt;
+}
+
+document.getElementById('btn-calibrate-tilt').addEventListener('click', () => {
+    state.tiltOffset = state.rawTilt;
+    showNotification("টিল্ট সেন্টার সেট করা হয়েছে!");
+});
+
+async function enableTiltMode() {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+            const response = await DeviceOrientationEvent.requestPermission();
+            if (response === 'granted') {
+                window.addEventListener('deviceorientation', handleDeviceOrientation);
+                state.tiltOffset = state.rawTilt;
+                return true;
+            } else {
+                showNotification("টিল্ট সেন্সর পারমিশন দেওয়া হয়নি!", true);
+                return false;
+            }
+        } catch (err) {
+            showNotification("এই ডিভাইসে টিল্ট সাপোর্ট নেই!", true);
+            return false;
+        }
+    } else {
+        window.addEventListener('deviceorientation', handleDeviceOrientation);
+        state.tiltOffset = state.rawTilt;
+        return true;
+    }
+}
+
+btnControlMode.addEventListener('click', async () => {
+    const modes = ['wheel', 'buttons', 'tilt'];
+    let nextIndex = (modes.indexOf(state.controlMode) + 1) % modes.length;
+    let nextMode = modes[nextIndex];
+
+    if (nextMode === 'tilt') {
+        const ok = await enableTiltMode();
+        if (!ok) nextMode = 'wheel';
+    }
+
+    state.controlMode = nextMode;
+    state.steeringInput = 0;
+    state.wheelAngleDeg = 0;
+
+    wheelContainer.style.display = nextMode === 'wheel' ? 'flex' : 'none';
+    touchBtnsContainer.style.display = nextMode === 'buttons' ? 'flex' : 'none';
+    tiltContainer.style.display = nextMode === 'tilt' ? 'flex' : 'none';
+
+    const labels = {
+        wheel: 'কন্ট্রোল: স্টিয়ারিং',
+        buttons: 'কন্ট্রোল: বাটন',
+        tilt: 'কন্ট্রোল: টিল্ট (Tilt)'
+    };
+    btnControlMode.textContent = labels[nextMode];
+});
+
+// মাল্টি-টাচ পেডাল ও বাটন বাইন্ডিং
+function bindMultiTouchHold(elementId, keyName) {
+    const el = document.getElementById(elementId);
+    let activeTouchId = null;
+
+    el.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (activeTouchId !== null) return;
+        activeTouchId = e.changedTouches[0].identifier;
+        keys[keyName] = true;
+        el.classList.add('pressed');
+    }, { passive: false });
+
+    const endTouch = (e) => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === activeTouchId) {
+                activeTouchId = null;
+                keys[keyName] = false;
+                el.classList.remove('pressed');
+                break;
+            }
+        }
+    };
+    el.addEventListener('touchend', endTouch);
+    el.addEventListener('touchcancel', endTouch);
+
+    el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        keys[keyName] = true;
+        el.classList.add('pressed');
+    });
+    el.addEventListener('mouseup', () => { keys[keyName] = false; el.classList.remove('pressed'); });
+    el.addEventListener('mouseleave', () => { keys[keyName] = false; el.classList.remove('pressed'); });
+}
+
+bindMultiTouchHold('btn-gas', 'gas');
+bindMultiTouchHold('btn-brake', 'brake');
+bindMultiTouchHold('btn-left', 'left');
+bindMultiTouchHold('btn-right', 'right');
+
+// --- সিমুলেটর বাটন ও ইউআই অ্যাকশন ---
+const speedValEl = document.getElementById('speed-val');
+const rpmValEl = document.getElementById('rpm-val');
+const fuelBarEl = document.getElementById('fuel-bar');
+const healthBarEl = document.getElementById('health-bar');
+const hudMoneyEl = document.getElementById('hud-money');
+const hudPassengersEl = document.getElementById('hud-passengers');
+const missionTextEl = document.getElementById('mission-text');
+const notificationEl = document.getElementById('notification-banner');
+const boardingOverlay = document.getElementById('boarding-overlay');
+const boardingFill = document.getElementById('boarding-fill');
+const btnDoor = document.getElementById('btn-door');
+const doorLabel = document.getElementById('door-label');
+const btnRefuel = document.getElementById('btn-refuel');
+const btnRepair = document.getElementById('btn-repair');
+const btnHandbrake = document.getElementById('btn-handbrake');
+
+function showNotification(msg, isError = false) {
+    notificationEl.textContent = msg;
+    notificationEl.style.background = isError ? 'rgba(220, 38, 38, 0.95)' : 'rgba(16, 185, 129, 0.95)';
+    notificationEl.classList.add('show');
+    clearTimeout(notificationEl._timer);
+    notificationEl._timer = setTimeout(() => {
+        notificationEl.classList.remove('show');
+    }, 2600);
+}
+
+// ইঞ্জিন স্টার্ট / স্টপ
+document.getElementById('btn-engine').addEventListener('click', toggleEngine);
+function toggleEngine() {
+    state.engineOn = !state.engineOn;
+    const btn = document.getElementById('btn-engine');
+    const lbl = document.getElementById('engine-label');
+    lbl.textContent = state.engineOn ? 'চালু' : 'বন্ধ';
+    btn.classList.toggle('engine-on', state.engineOn);
+    showNotification(state.engineOn ? "ইঞ্জিন চালু হয়েছে!" : "ইঞ্জিন বন্ধ করা হয়েছে", !state.engineOn);
+}
+
+// দিন / রাতের আবহাওয়া পরিবর্তন
+document.getElementById('btn-day-night').addEventListener('click', toggleDayNight);
+function toggleDayNight() {
+    state.isNight = !state.isNight;
+    const btn = document.getElementById('btn-day-night');
+    btn.textContent = state.isNight ? '🌙 রাত' : '☀️ দিন';
+    
+    scene.background.setHex(state.isNight ? 0x090d16 : 0x87ceeb);
+    scene.fog.color.setHex(state.isNight ? 0x090d16 : 0x87ceeb);
+    ambientLight.intensity = state.isNight ? 0.22 : 0.68;
+    dirLight.intensity = state.isNight ? 0.15 : 0.88;
+
+    streetLamps.forEach(mat => {
+        mat.color.setHex(state.isNight ? 0xfef08a : 0x94a3b8);
+    });
+
+    if (state.isNight && !state.headlightsOn) {
+        toggleHeadlights();
+    }
+}
+
+// হ্যান্ডব্রেক
+btnHandbrake.addEventListener('click', toggleHandbrake);
+function toggleHandbrake() {
+    state.handbrake = !state.handbrake;
+    btnHandbrake.classList.toggle('active', state.handbrake);
+    showNotification(state.handbrake ? "হ্যান্ডব্রেক চালু (P)" : "হ্যান্ডব্রেক ছাড়া হয়েছে");
+}
+
+// গেম শুরু ও রিস্টার্ট
+document.getElementById('start-btn').addEventListener('click', () => {
+    sound.init();
+    document.getElementById('start-screen').style.display = 'none';
+    resetGame();
+    state.isPlaying = true;
+});
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+    document.getElementById('gameover-screen').style.display = 'none';
+    resetGame();
+    state.isPlaying = true;
+});
+
+function resetGame() {
+    state.engineOn = true;
+    document.getElementById('engine-label').textContent = 'চালু';
+    document.getElementById('btn-engine').classList.add('engine-on');
+    state.speed = 0;
+    state.rpm = 800;
+    state.gear = 'D';
+    state.handbrake = false;
+    btnHandbrake.classList.remove('active');
+    state.steeringInput = 0;
+    state.wheelAngleDeg = 0;
+    state.busX = 2.5;
+    state.busZ = 0;
+    state.busRotation = 0;
+    state.fuel = 100;
+    state.health = 100;
+    state.money = 500;
+    state.passengers = 0;
+    state.totalServed = 0;
+    state.doorOpen = false;
+    state.isBoarding = false;
+    doorLabel.textContent = 'বন্ধ';
+    btnDoor.classList.remove('active');
+    busDoor.position.set(1.35, 1.42, -2.6);
+    updateGearUI();
+    updateHUD();
+}
+
+// গিয়ার শিফটিং
+document.querySelectorAll('.gear-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (Math.abs(state.speed) > 5) {
+            showNotification("গিয়ার পরিবর্তনের আগে ব্রেক করুন!", true);
+            return;
+        }
+        state.gear = btn.dataset.gear;
+        updateGearUI();
+    });
+});
+
+function updateGearUI() {
+    document.querySelectorAll('.gear-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.gear === state.gear);
+    });
+}
+
+function cycleGear() {
+    if (Math.abs(state.speed) > 5) {
+        showNotification("গিয়ার পরিবর্তনের আগে ব্রেক করুন!", true);
+        return;
+    }
+    const order = ['D', 'N', 'R'];
+    state.gear = order[(order.indexOf(state.gear) + 1) % order.length];
+    updateGearUI();
+}
+
+// ক্যামেরা ভিউ পরিবর্তন (চেজ, ককপিট, সিনেম্যাটিক টপ)
+document.getElementById('btn-camera').addEventListener('click', toggleCamera);
+function toggleCamera() {
+    state.cameraMode = (state.cameraMode + 1) % 3;
+    const camNames = ['চেজ', 'ককপিট', 'টপ ভিউ'];
+    document.getElementById('cam-label').textContent = camNames[state.cameraMode];
+    document.getElementById('btn-camera').classList.toggle('active', state.cameraMode !== 0);
+}
+
+// হেডলাইট
+document.getElementById('btn-headlight').addEventListener('click', toggleHeadlights);
+function toggleHeadlights() {
+    state.headlightsOn = !state.headlightsOn;
+    const intensity = state.headlightsOn ? 2.8 : 0;
+    spotLightL.intensity = intensity;
+    spotLightR.intensity = intensity;
+    hlMat.color.setHex(state.headlightsOn ? 0xfef08a : 0x94a3b8);
+
+    document.getElementById('light-label').textContent = state.headlightsOn ? 'চালু' : 'বন্ধ';
+    document.getElementById('btn-headlight').classList.toggle('active', state.headlightsOn);
+}
+
+// হর্ন
+document.getElementById('btn-horn').addEventListener('click', () => {
+    sound.playHorn();
+    trafficCars.forEach(car => {
+        if (Math.abs(car.mesh.position.z - state.busZ) < 35) {
+            car.laneX += car.laneX > 0 ? 0.5 : -0.5;
+        }
+    });
+});
+
+// ইন্ডিকেটর
+document.getElementById('ind-left').addEventListener('click', () => {
+    state.leftIndicator = !state.leftIndicator;
+    if (state.leftIndicator) state.rightIndicator = false;
+});
+document.getElementById('ind-right').addEventListener('click', () => {
+    state.rightIndicator = !state.rightIndicator;
+    if (state.rightIndicator) state.leftIndicator = false;
+});
+
+// দরজা ও যাত্রী ওঠানামা
+btnDoor.addEventListener('click', toggleDoor);
+function toggleDoor() {
+    if (Math.abs(state.speed) > 1.5) {
+        showNotification("চলন্ত অবস্থায় দরজা খোলা যাবে না! আগে বাস থামান।", true);
+        return;
+    }
+    state.doorOpen = !state.doorOpen;
+    doorLabel.textContent = state.doorOpen ? 'খোলা' : 'বন্ধ';
+    btnDoor.classList.toggle('active', state.doorOpen);
+    
+    busDoor.position.x = state.doorOpen ? 1.48 : 1.35;
+    busDoor.position.z = state.doorOpen ? -2.0 : -2.6;
+
+    if (state.doorOpen && state.activeStop) {
+        startBoardingProcess();
+    } else {
+        state.isBoarding = false;
+        boardingOverlay.style.display = 'none';
+    }
+}
+
+function startBoardingProcess() {
+    if (state.isBoarding) return;
+    state.isBoarding = true;
+    state.boardingProgress = 0;
+    boardingOverlay.style.display = 'block';
+    document.getElementById('boarding-text').textContent = `${state.activeStop.name}-এ যাত্রী ওঠানামা করছে...`;
+}
+
+// রিফুয়েল ও মেরামত
+btnRefuel.addEventListener('click', () => {
+    if (state.money >= 200 && state.fuel < 98) {
+        state.money -= 200;
+        state.fuel = 100;
+        sound.playCoin();
+        showNotification("জ্বালানি ট্যাংক ফুল করা হয়েছে! (-৳২০০)");
+        updateHUD();
+    } else if (state.money < 200) {
+        showNotification("পর্যাপ্ত টাকা নেই!", true);
+    }
+});
+
+btnRepair.addEventListener('click', () => {
+    if (state.money >= 150 && state.health < 98) {
+        state.money -= 150;
+        state.health = 100;
+        sound.playCoin();
+        showNotification("বাস সম্পূর্ণ মেরামত করা হয়েছে! (-৳১৫০)");
+        updateHUD();
+    } else if (state.money < 150) {
+        showNotification("পর্যাপ্ত টাকা নেই!", true);
+    }
+});
+
+// পিসি কিবোর্ড সাপোর্ট
+window.addEventListener('keydown', (e) => {
+    if (!state.isPlaying) return;
+    switch (e.key.toLowerCase()) {
+        case 'w': case 'arrowup': keys.gas = true; document.getElementById('btn-gas').classList.add('pressed'); break;
+        case 's': case 'arrowdown': keys.brake = true; document.getElementById('btn-brake').classList.add('pressed'); break;
+        case 'a': case 'arrowleft': keys.left = true; document.getElementById('btn-left').classList.add('pressed'); break;
+        case 'd': case 'arrowright': keys.right = true; document.getElementById('btn-right').classList.add('pressed'); break;
+        case ' ': toggleHandbrake(); break;
+        case 'i': toggleEngine(); break;
+        case 'n': toggleDayNight(); break;
+        case 'h': sound.playHorn(); break;
+        case 'l': toggleHeadlights(); break;
+        case 'c': toggleCamera(); break;
+        case 'g': cycleGear(); break;
+        case 'q': state.leftIndicator = !state.leftIndicator; if (state.leftIndicator) state.rightIndicator = false; break;
+        case 'e': state.rightIndicator = !state.rightIndicator; if (state.rightIndicator) state.leftIndicator = false; break;
+        case 'o': toggleDoor(); break;
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    switch (e.key.toLowerCase()) {
+        case 'w': case 'arrowup': keys.gas = false; document.getElementById('btn-gas').classList.remove('pressed'); break;
+        case 's': case 'arrowdown': keys.brake = false; document.getElementById('btn-brake').classList.remove('pressed'); break;
+        case 'a': case 'arrowleft': keys.left = false; document.getElementById('btn-left').classList.remove('pressed'); break;
+        case 'd': case 'arrowright': keys.right = false; document.getElementById('btn-right').classList.remove('pressed'); break;
+    }
+});
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// --- HUD এবং মিনিম্যাপ আপডেট ---
+const minimapCanvas = document.getElementById('minimap-canvas');
+const mmCtx = minimapCanvas.getContext('2d');
+
+function drawMinimap() {
+    const w = minimapCanvas.width;
+    const h = minimapCanvas.height;
+    mmCtx.clearRect(0, 0, w, h);
+
+    // রাডার ব্যাকগ্রাউন্ড
+    mmCtx.fillStyle = '#0f172a';
+    mmCtx.fillRect(0, 0, w, h);
+
+    // রাস্তা
+    mmCtx.fillStyle = '#334155';
+    mmCtx.fillRect(w / 2 - 18, 0, 36, h);
+
+    // বাস স্টপেজ (সবুজ চিহ্ন)
+    busStops.forEach(bs => {
+        if (!bs.visited) {
+            const relZ = (bs.segment.position.z - state.busZ) * 0.45;
+            const py = h / 2 + relZ;
+            if (py > -10 && py < h + 10) {
+                mmCtx.fillStyle = '#10b981';
+                mmCtx.beginPath();
+                mmCtx.arc(w / 2 + 12, py, 5, 0, Math.PI * 2);
+                mmCtx.fill();
+            }
+        }
+    });
+
+    // সার্ভিস স্টেশন (হলুদ চিহ্ন)
+    serviceStations.forEach(ss => {
+        const relZ = (ss.segment.position.z - state.busZ) * 0.45;
+        const py = h / 2 + relZ;
+        if (py > -10 && py < h + 10) {
+            mmCtx.fillStyle = '#f59e0b';
+            mmCtx.fillRect(w / 2 + 8, py - 4, 8, 8);
+        }
+    });
+
+    // ট্রাফিক গাড়ি (লাল বিন্দু)
+    trafficCars.forEach(car => {
+        const relX = (car.mesh.position.x - state.busX) * 1.8;
+        const relZ = (car.mesh.position.z - state.busZ) * 0.45;
+        const px = w / 2 + relX;
+        const py = h / 2 + relZ;
+        if (py > 0 && py < h) {
+            mmCtx.fillStyle = '#ef4444';
+            mmCtx.fillRect(px - 2.5, py - 4, 5, 8);
+        }
+    });
+
+    // নিজের বাস (কেন্দ্রে সাদা তীর)
+    mmCtx.save();
+    mmCtx.translate(w / 2, h / 2);
+    mmCtx.rotate(-state.busRotation);
+    mmCtx.fillStyle = '#38bdf8';
+    mmCtx.beginPath();
+    mmCtx.moveTo(0, -7);
+    mmCtx.lineTo(5, 6);
+    mmCtx.lineTo(-5, 6);
+    mmCtx.closePath();
+    mmCtx.fill();
+    mmCtx.restore();
+}
+
+function updateHUD() {
+    speedValEl.textContent = toBengaliNumber(Math.abs(state.speed));
+    rpmValEl.textContent = toBengaliNumber(state.rpm);
+    hudMoneyEl.textContent = `৳ ${toBengaliNumber(state.money)}`;
+    hudPassengersEl.textContent = `${toBengaliNumber(state.passengers)} / ${toBengaliNumber(state.maxPassengers)}`;
+    
+    fuelBarEl.style.width = `${Math.max(0, state.fuel)}%`;
+    fuelBarEl.style.backgroundColor = state.fuel < 25 ? '#ef4444' : '#fbbf24';
+    
+    healthBarEl.style.width = `${Math.max(0, state.health)}%`;
+    healthBarEl.style.backgroundColor = state.health < 30 ? '#ef4444' : '#10b981';
+
+    brakeLightMat.color.setHex((keys.brake || state.handbrake) ? 0xff1e1e : 0x7f1d1d);
+}
+
+function triggerGameOver(reason) {
+    state.isPlaying = false;
+    document.getElementById('gameover-reason').textContent = reason;
+    document.getElementById('final-money').textContent = `৳ ${toBengaliNumber(state.money)}`;
+    document.getElementById('final-passengers').textContent = `${toBengaliNumber(state.totalServed)} জন`;
+    document.getElementById('gameover-screen').style.display = 'flex';
+}
+
+// --- মূল গেম ও ফিজিক্স লুপ ---
+let lastTime = performance.now();
+
+function animate(now) {
+    requestAnimationFrame(animate);
+    const dt = Math.min((now - lastTime) / 1000, 0.1);
+    lastTime = now;
+
+    if (state.isPlaying) {
+        updateSteering(dt);
+        updatePhysics(dt);
+        updateEnvironment();
+        updateTraffic(dt);
+        updateMissions(dt);
+        updateIndicators(dt);
+        updateHUD();
+        drawMinimap();
+    }
+
+    updateCamera();
+    renderer.render(scene, camera);
+}
+
+function updateSteering(dt) {
+    if (keys.left || keys.right) {
+        if (keys.left) state.steeringInput = Math.min(1, state.steeringInput + 3.2 * dt);
+        if (keys.right) state.steeringInput = Math.max(-1, state.steeringInput - 3.2 * dt);
+        state.wheelAngleDeg = -state.steeringInput * 270;
+    } else if (state.controlMode === 'wheel') {
+        if (wheelTouchId === null && !isMouseDraggingWheel) {
+            state.wheelAngleDeg *= Math.pow(0.04, dt);
+            if (Math.abs(state.wheelAngleDeg) < 0.5) state.wheelAngleDeg = 0;
+            state.steeringInput = -state.wheelAngleDeg / 360;
+        }
+    } else if (state.controlMode === 'buttons') {
+        state.steeringInput *= Math.pow(0.02, dt);
+    } else if (state.controlMode === 'tilt') {
+        const netTilt = state.rawTilt - state.tiltOffset;
+        const deadzone = 3;
+        let normalized = 0;
+        if (Math.abs(netTilt) > deadzone) {
+            normalized = Math.max(-1, Math.min(1, -(netTilt - Math.sign(netTilt) * deadzone) / 28));
+        }
+        state.steeringInput += (normalized - state.steeringInput) * 10 * dt;
+        const dotPct = 50 - state.steeringInput * 45;
+        tiltDot.style.left = `${dotPct}%`;
+    }
+
+    wheelSvg.style.transform = `rotate(${state.wheelAngleDeg}deg)`;
+    steeringWheel3D.rotation.z = state.steeringInput * 2.2;
+}
+
+function updatePhysics(dt) {
+    if (!state.engineOn && keys.gas) {
+        showNotification("আগে ইঞ্জিন চালু (🔑) করুন!", true);
+        keys.gas = false;
+    }
+    if (state.doorOpen && keys.gas) {
+        showNotification("আগে বাসের দরজা বন্ধ করুন!", true);
+        keys.gas = false;
+    }
+
+    if (state.handbrake) {
+        if (state.speed > 0) state.speed = Math.max(0, state.speed - 58 * dt);
+        else if (state.speed < 0) state.speed = Math.min(0, state.speed + 58 * dt);
+    } else if (state.engineOn && keys.gas && !state.doorOpen) {
+        if (state.gear === 'D') {
+            state.speed += 24 * dt;
+            if (state.speed > state.maxSpeed) state.speed = state.maxSpeed;
+        } else if (state.gear === 'R') {
+            state.speed -= 16 * dt;
+            if (state.speed < -28) state.speed = -28;
+        }
+    } else if (keys.brake) {
+        if (state.speed > 0) state.speed = Math.max(0, state.speed - 50 * dt);
+        else if (state.speed < 0) state.speed = Math.min(0, state.speed + 50 * dt);
+    } else {
+        if (state.speed > 0) state.speed = Math.max(0, state.speed - 8 * dt);
+        else if (state.speed < 0) state.speed = Math.min(0, state.speed + 8 * dt);
+    }
+
+    // RPM ক্যালকুলেশন
+    if (!state.engineOn) {
+        state.rpm = 0;
+    } else {
+        const targetRpm = 800 + (Math.abs(state.speed) / state.maxSpeed) * 4200 + (keys.gas ? 600 : 0);
+        state.rpm += (targetRpm - state.rpm) * 8 * dt;
+    }
+
+    // বাস ঘোরানো
+    const maxTurnRate = 1.65;
+    if (Math.abs(state.speed) > 0.4) {
+        const dirMultiplier = state.speed >= 0 ? 1 : -1;
+        const speedFactor = Math.min(Math.abs(state.speed), 28) / 28;
+        state.busRotation += state.steeringInput * maxTurnRate * dt * dirMultiplier * speedFactor;
+    }
+
+    state.busRotation = Math.max(-0.68, Math.min(0.68, state.busRotation));
+
+    const velocity = (state.speed * 0.35) * dt;
+    state.busX -= Math.sin(state.busRotation) * velocity;
+    state.busZ -= Math.cos(state.busRotation) * velocity;
+
+    // ফুটপাতের সাথে ধাক্কা বা সীমা নিয়ন্ত্রণ
+    const maxRoadX = roadWidth / 2 - 1.35;
+    if (state.busX > maxRoadX) {
+        state.busX = maxRoadX;
+        state.busRotation *= 0.5;
+        state.speed *= 0.85;
+    } else if (state.busX < -maxRoadX) {
+        state.busX = -maxRoadX;
+        state.busRotation *= 0.5;
+        state.speed *= 0.85;
+    }
+
+    busGroup.position.set(state.busX, 0, state.busZ);
+    busGroup.rotation.y = state.busRotation;
+
+    wheels.forEach(w => {
+        w.rotation.x -= velocity * 1.5;
+    });
+
+    // জ্বালানি খরচ
+    if (state.engineOn && Math.abs(state.speed) > 0.5) {
+        state.fuel -= (0.4 + Math.abs(state.speed) * 0.008) * dt;
+        if (state.fuel <= 0) {
+            state.fuel = 0;
+            triggerGameOver("আপনার বাসের জ্বালানি (Fuel) সম্পূর্ণ শেষ হয়ে গেছে!");
+        }
+    }
+
+    sound.updateEngine(state.speed / state.maxSpeed, state.engineOn);
+}
+
+function updateEnvironment() {
+    roadSegments.forEach(seg => {
+        if (seg.position.z - state.busZ > segmentLength * 1.5) {
+            seg.position.z -= numSegments * segmentLength;
+            busStops.forEach(bs => {
+                if (bs.segment === seg) {
+                    bs.visited = false;
+                    bs.name = stopNames[stopNameIndex % stopNames.length];
+                    stopNameIndex++;
+                }
+            });
+        }
+    });
+}
+
+function updateTraffic(dt) {
+    trafficCars.forEach(car => {
+        car.mesh.position.z += car.dir * (car.speed * 0.35) * dt;
+        car.mesh.position.x += (car.laneX - car.mesh.position.x) * 2 * dt;
+
+        if (car.mesh.position.z - state.busZ > 45) {
+            car.mesh.position.z = state.busZ - 260 - Math.random() * 80;
+        } else if (car.mesh.position.z - state.busZ < -350) {
+            car.mesh.position.z = state.busZ - 180;
+        }
+
+        const dx = Math.abs(car.mesh.position.x - state.busX);
+        const dz = Math.abs(car.mesh.position.z - state.busZ);
+        if (dx < 2.25 && dz < 5.9) {
+            sound.playCrash();
+            state.health -= 18;
+            state.speed *= -0.3;
+            car.mesh.position.z -= 12;
+            showNotification("দুর্ঘটনা! সতর্কতার সাথে বাস চালান (-১৮% হেলথ)", true);
+
+            if (state.health <= 0) {
+                state.health = 0;
+                triggerGameOver("দুর্ঘটনায় আপনার বাসটি মারাত্মকভাবে ক্ষতিগ্রস্ত হয়েছে!");
+            }
+        }
+    });
+}
+
+function updateMissions(dt) {
+    let nearestStop = null;
+    let minDist = Infinity;
+
+    busStops.forEach(bs => {
+        const dist = state.busZ - bs.segment.position.z;
+        if (!bs.visited && dist > -15 && dist < minDist) {
+            minDist = dist;
+            nearestStop = bs;
+        }
+    });
+
+    if (nearestStop) {
+        const distMeters = Math.max(0, Math.round(minDist));
+        missionTextEl.textContent = `পরবর্তী স্টপেজ: ${nearestStop.name} (${toBengaliNumber(distMeters)} মি.)`;
+
+        if (Math.abs(minDist) < 7 && state.busX > 3.5) {
+            state.activeStop = nearestStop;
+            btnDoor.classList.add('door-ready');
+            if (Math.abs(state.speed) < 1.2 && !state.doorOpen) {
+                missionTextEl.textContent = `স্টপেজে পৌঁছেছেন! এখন 'দরজা' খুলুন`;
+            }
+        } else {
+            state.activeStop = null;
+            btnDoor.classList.remove('door-ready');
+        }
+    } else {
+        missionTextEl.textContent = "সামনের রাস্তায় এগিয়ে যান";
+        btnDoor.classList.remove('door-ready');
+    }
+
+    if (state.isBoarding && state.doorOpen && state.activeStop) {
+        state.boardingProgress += 36 * dt;
+        boardingFill.style.width = `${Math.min(100, state.boardingProgress)}%`;
+
+        if (state.boardingProgress >= 100) {
+            state.isBoarding = false;
+            boardingOverlay.style.display = 'none';
+            state.activeStop.visited = true;
+
+            const dropped = Math.min(state.passengers, Math.floor(Math.random() * 6) + 2);
+            const picked = Math.min(state.maxPassengers - (state.passengers - dropped), Math.floor(Math.random() * 8) + 4);
+            
+            state.passengers = state.passengers - dropped + picked;
+            state.totalServed += dropped + picked;
+            const fareEarned = (dropped * 35) + (picked * 45);
+            state.money += fareEarned;
+
+            sound.playCoin();
+            showNotification(`${toBengaliNumber(picked)} জন যাত্রী উঠেছে, ${toBengaliNumber(dropped)} জন নেমেছে! (+৳${toBengaliNumber(fareEarned)})`);
+            state.activeStop = null;
+            btnDoor.classList.remove('door-ready');
+        }
+    }
+
+    // সার্ভিস স্টেশন (ফুয়েল ও রিপেয়ার) চেক
+    let atStation = false;
+    serviceStations.forEach(ss => {
+        const dist = Math.abs(state.busZ - ss.segment.position.z);
+        if (dist < 8 && state.busX > 3.0 && Math.abs(state.speed) < 2) {
+            atStation = true;
+        }
+    });
+    btnRefuel.style.display = atStation ? 'flex' : 'none';
+    btnRepair.style.display = (atStation && state.health < 98) ? 'flex' : 'none';
+}
+
+function updateIndicators(dt) {
+    state.indicatorTimer += dt;
+    const blinkOn = Math.floor(state.indicatorTimer * 3) % 2 === 0;
+
+    const indLeftEl = document.getElementById('ind-left');
+    const indRightEl = document.getElementById('ind-right');
+
+    if (state.leftIndicator && blinkOn) {
+        indLeftEl.classList.add('blinking');
+        indMatL.color.setHex(0xfacc15);
+    } else {
+        indLeftEl.classList.remove('blinking');
+        indMatL.color.setHex(0x475569);
+    }
+
+    if (state.rightIndicator && blinkOn) {
+        indRightEl.classList.add('blinking');
+        indMatR.color.setHex(0xfacc15);
+    } else {
+        indRightEl.classList.remove('blinking');
+        indMatR.color.setHex(0x475569);
+    }
+}
+
+function updateCamera() {
+    if (state.cameraMode === 0) {
+        const targetX = state.busX + Math.sin(state.busRotation) * 12.5;
+        const targetZ = state.busZ + Math.cos(state.busRotation) * 12.5;
+        camera.position.lerp(new THREE.Vector3(targetX, 5.6, targetZ), 0.14);
+        camera.lookAt(
+            state.busX - Math.sin(state.busRotation) * 8,
+            1.8,
+            state.busZ - Math.cos(state.busRotation) * 8
+        );
+    } else if (state.cameraMode === 1) {
+        const driverOffset = new THREE.Vector3(-0.68, 2.28, -2.95);
+        driverOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), state.busRotation);
+        camera.position.set(
+            state.busX + driverOffset.x,
+            driverOffset.y,
+            state.busZ + driverOffset.z
+        );
+        camera.lookAt(
+            state.busX - Math.sin(state.busRotation) * 20,
+            1.8,
+            state.busZ - Math.cos(state.busRotation) * 20
+        );
+    } else {
+        const targetX = state.busX + Math.sin(state.busRotation) * 16;
+        const targetZ = state.busZ + Math.cos(state.busRotation) * 16;
+        camera.position.lerp(new THREE.Vector3(targetX, 15, targetZ), 0.12);
+        camera.lookAt(
+            state.busX - Math.sin(state.busRotation) * 6,
+            1.0,
+            state.busZ - Math.cos(state.busRotation) * 6
+        );
+    }
+}
+
+animate(performance.now());
+</script>
+</body>
+</html>
+```
